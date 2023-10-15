@@ -24,38 +24,42 @@ public class FilterTaskAuth extends  OncePerRequestFilter{
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
 
-        //pegar usuario e senha // tratamento de divisao de usauario e senha 
-        var authorization = request.getHeader("Authorization");
-        var authEncode = authorization.substring("Basic".length()).trim();
-        byte[] authDecode = Base64.getDecoder().decode(authEncode);
-        
-        var authString = new String(authDecode);
-        String [] credentials = authString.split(":");
-        String username = credentials[0];
-        String password = credentials[1];
+        //validando rota
+        var servletPath = request.getServletPath();
+        if (servletPath.startsWith("/tasks/")){
 
-        //validar usuario 
-        var user = this.userRepository.findByUsername(username);
-        if (user == null){
-          response.sendError(401);
+          //pegar usuario e senha // tratamento de divisao de usauario e senha 
+          var authorization = request.getHeader("Authorization");
+          var authEncode = authorization.substring("Basic".length()).trim();
+          byte[] authDecode = Base64.getDecoder().decode(authEncode);
+          
+          var authString = new String(authDecode);
+          String [] credentials = authString.split(":");
+          String username = credentials[0];
+          String password = credentials[1];
 
-        } else {
-          //validar senha
-          var passwordVerfiry = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
-          if (passwordVerfiry.verified){
-            filterChain.doFilter(request, response);
+          //validar usuario 
+          var user = this.userRepository.findByUsername(username);
+          if (user == null){
+            response.sendError(401);
 
           } else {
-             response.sendError(401);
-          }
-           
+            //validar senha
+            var passwordVerfiry = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
+            if (passwordVerfiry.verified){
+              //sett Idduser como o valor .getID para "request.setAtt" para o Taskcontroller ter acesso.
+              //segue viagem.
+              request.setAttribute("IdUser", user.getId());
+              filterChain.doFilter(request, response);
 
-        }
+            } else {
+              response.sendError(401);
+            }
 
+          } 
 
-
-
-    
-       
+        } else {
+          filterChain.doFilter(request, response);
+        }   
   }
 }
